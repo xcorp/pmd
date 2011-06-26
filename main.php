@@ -49,7 +49,12 @@ function insertMovie($movie) {
  						INSERT INTO `actor-movie` SELECT id, "'.$movie->ID.'" FROM actors  WHERE actor="'.$actor.'";';
 		}
 		
-		echo $query;
+		if($mysqli->multi_query($query)) {
+			echo "Movie added to database";
+		}
+		else {
+			echo "Something went wrong, try again";
+		}
 		
 	}
 	
@@ -76,10 +81,11 @@ function printUploadForm() {
 }
 
 function getMovieInfo($type, $value) {
-	$name = str_replace(' ', '%20', $value);
+	//$name = str_replace(' ', '%20', $value);
 	$url = 'http://www.imdbapi.com/?plot=full&'.$type.'='.$value;
 	$json = file_get_contents($url);
 	$movie = (json_decode($json));
+	$movie->ID = preg_replace('/[^0-9]*/','', $movie->ID);
 	$movie->Genre = explode(",", $movie->Genre);
 	$movie->Director = explode(",", $movie->Director);
 	$movie->Writer = explode(",", $movie->Writer);
