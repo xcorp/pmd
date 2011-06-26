@@ -6,6 +6,6 @@ if(isset($_GET['uploaded'])) {
 	parseUploadedFile();
 }
 
-printUploadForm()
+printMovie(getMovie('322259'));
 
 ?>

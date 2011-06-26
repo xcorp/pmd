@@ -8,7 +8,7 @@ function checkIfMovieExists($id) {
 	return $result->num_rows;
 }
 
-function escapeSpaces($string) {
+function replaceSpaces($string) {
 	return str_replace(' ', '\ ', $string);
 }
 
@@ -16,7 +16,7 @@ function escapeSpaces($string) {
 function insertMovie($movie) {
 	global $mysqli;
 	if(checkIfMovieExists($movie->ID)) {
-		echo "Movie already exists";
+		echo  $movie->Title.' already exists';
 	}
 	else {
 		$query = 'INSERT INTO movies VALUES (
@@ -50,28 +50,25 @@ function insertMovie($movie) {
 		}
 		
 		if($mysqli->multi_query($query)) {
-			echo "Movie added to database";
+			echo $movie->Title.' added to database';
+			printMovie($movie->ID);
 		}
 		else {
 			echo "Something went wrong, try again";
-		}
-		
-	}
-	
+		}		
+	}	
 }
 
 function parseUploadedFile() {
 	move_uploaded_file($_FILES["file"]["tmp_name"], "tmp/" . $_FILES["file"]["name"]);
-	$imdbLink = exec('grep imdb /var/www/pmd/tmp/'.escapeSpaces($_FILES["file"]["name"]));
+	$imdbLink = exec('grep imdb /var/www/pmd/tmp/'.replaceSpaces($_FILES["file"]["name"]));
 	$imdbId = 'tt'.preg_replace('/[^0-9]*/','', $imdbLink);
 	insertMovie((getMovieInfo('i', $imdbId)));
-	exec('rm /var/www/pmd/tmp/'.$_FILES["file"]["name"]);
-
-	
+	exec('rm /var/www/pmd/tmp/'.$_FILES["file"]["name"]);	
 }
 
 function printUploadForm() {
-	echo '<form action="index.php?uploaded" method="post"
+	echo '<form action="?uploaded" method="post"
 	enctype="multipart/form-data">
 	<label for="file">Filename:</label>
 	<input type="file" name="file" id="file" />
@@ -91,7 +88,54 @@ function getMovieInfo($type, $value) {
 	$movie->Writer = explode(",", $movie->Writer);
 	$movie->Actors = explode(",", $movie->Actors);
 	return $movie;
+}
 
+function getMovie($id) {
+	global $mysqli;
+	$query = 'SELECT * FROM movies WHERE id="'.$id.'";';
+	$result = $mysqli->query($query);
+	while ($res = $result->fetch_object()) {
+		$movie = $res;
+	}
+	$query = 'SELECT actors.actor FROM actors LEFT JOIN `actor-movie` ON actors.id=`actor-movie`.actor WHERE movie='.$id.';';
+	$result = $mysqli->query($query);
+	while ($actor = $result->fetch_object()) {
+		$movie->actors[] = $actor->actor;
+	}
+	
+	$query = 'SELECT genres.genre FROM genres LEFT JOIN `genre-movie` ON genres.id=`genre-movie`.genre WHERE movie='.$id.';';
+	$result = $mysqli->query($query);
+	while ($genre = $result->fetch_object()) {
+		$movie->genres[] = $genre->genre;
+	}
+	
+	$query = 'SELECT writers.writer FROM writers LEFT JOIN `writer-movie` ON writers.id=`writer-movie`.writer WHERE movie='.$id.';';
+	$result = $mysqli->query($query);
+	while ($writer = $result->fetch_object()) {
+		$movie->writers[] = $writer->writer;
+	}
+	
+	$query = 'SELECT directors.director FROM directors LEFT JOIN `director-movie` ON directors.id=`director-movie`.director WHERE movie='.$id.';';
+	$result = $mysqli->query($query);
+	while ($director = $result->fetch_object()) {
+		$movie->directors[] = $director->director;
+	}
+	
+	return $movie;
+}
+
+function printMovie($movie) {
+	echo '<H1>'.$movie->title.' ('.$movie->year.')</H1>
+	Released: '.$movie->released.'<br />
+	<img src="'.$movie->poster.'" /><br />
+	Runtime: '.$movie->runtime.'
+	<h2>Plot:</h2>
+	<p>'.$movie->plot.'</p>
+	Stars:<br />';
+	foreach ($movie->actors as $actor) {
+		echo $actor.'<br />';
+		;
+	}
 }
 
 
