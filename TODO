@@ -1,2 +1,5 @@
+*****IMPORTANT******
+*Query for getting all movies connected to an actor, diretctor etc.
+
 *Escape all PATHS using escapeSpecialChars()
 *Check if uploaded nfo contains link to IMDB, if not, abort

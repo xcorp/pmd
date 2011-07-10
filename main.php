@@ -8,6 +8,10 @@ function checkIfMovieExists($id) {
 	return $result->num_rows;
 }
 
+function escapeSpecialChars($string) {
+	$string = str_replace("'", "\'", $string);
+	return str_replace(' ', '\ ', $string);
+}
 
 function getMovie($id) {
 	global $mysqli;
@@ -43,11 +47,18 @@ function getMovie($id) {
 	return $movie;
 }
 
-function escapeSpecialChars($string) {
-	$string = str_replace("'", "\'", $string);
-	return str_replace(' ', '\ ', $string);
+function getMovieInfo($type, $value) {
+	//$name = str_replace(' ', '%20', $value);
+	$url = 'http://www.imdbapi.com/?plot=full&'.$type.'='.$value;
+	$json = file_get_contents($url);
+	$movie = (json_decode($json));
+	$movie->ID = preg_replace('/[^0-9]*/','', $movie->ID);
+	$movie->Genre = explode(",", $movie->Genre);
+	$movie->Director = explode(",", $movie->Director);
+	$movie->Writer = explode(",", $movie->Writer);
+	$movie->Actors = explode(",", $movie->Actors);
+	return $movie;
 }
-
 
 function insertMovie($movie) {
 	global $mysqli;
@@ -101,30 +112,16 @@ function parseUploadedFile() {
 	exec('rm /var/www/pmd/tmp/'.$_FILES["file"]["name"]);	
 }
 
-function printUploadForm() {
-	echo '<form action="?uploaded" method="post"
-	enctype="multipart/form-data">
-	<label for="file">Filename:</label>
-	<input type="file" name="file" id="file" />
-	<br />
-	<input type="submit" value="Upload" />
-	</form>';
+function printActor($id) {
+	global $mysqli;
+	$query = 'SELECT title, id FROM movies WHERE id=(SELECT movie FROM actors LEFT JOIN `actor-movie` ON(actors.id=`actor-movie`.actor) WHERE id='.$id.' );';
+	echo $query;
+	$result=$mysqli->query($query);
+	while ($res = $result->fetch_object()) {
+		
+		echo '<a href="?movie='.getMovie($res->id)->id.'">'.$res->title.'</a>';
+	}
 }
-
-function getMovieInfo($type, $value) {
-	//$name = str_replace(' ', '%20', $value);
-	$url = 'http://www.imdbapi.com/?plot=full&'.$type.'='.$value;
-	$json = file_get_contents($url);
-	$movie = (json_decode($json));
-	$movie->ID = preg_replace('/[^0-9]*/','', $movie->ID);
-	$movie->Genre = explode(",", $movie->Genre);
-	$movie->Director = explode(",", $movie->Director);
-	$movie->Writer = explode(",", $movie->Writer);
-	$movie->Actors = explode(",", $movie->Actors);
-	return $movie;
-}
-
-
 
 function printMovie($movie) {
 	echo '<H1>'.$movie->title.' ('.$movie->year.')</H1>
@@ -140,20 +137,45 @@ function printMovie($movie) {
 	}
 }
 
-function printSearchField() {
+function printSearchForm() {
 	echo '<form action="?" method="GET">
-		<input name="search_string">
+		<input name="search_string"> <br />
+		Movie: <input type="radio" name="search_type" value="movie" checked> <br />
+		Actor: <input type="radio" name="search_type" value="actor"> <br />
+		Director: <input type="radio" name="search_type" value="director"> <br />
+		Writer: <input type="radio" name="search_type" value="writer"> <br />
+		Genre: <input type="radio" name="search_type" value="genre"> <br />
 		<input type="submit" value="Search">
 		</form>';
 }
 
-function searchMovie($string) {
+function printSearchResult($search_type, $result) {
+	while ($res = $result->fetch_object()) {
+		$type=$search_type;
+		if ($search_type == "movie") {
+			$type="title";
+		}
+		 echo '<a href="?'.$search_type.'='.$res->id.'">'.$res->$type.'</a><br />';
+	}
+}
+
+function printUploadForm() {
+	echo '<form action="?uploaded" method="post"
+	enctype="multipart/form-data">
+	<label for="file">Filename:</label>
+	<input type="file" name="file" id="file" />
+	<br />
+	<input type="submit" value="Upload" />
+	</form>';
+}
+
+function searchMovie($type, $string) {
 	global $mysqli;
 	$query = 'SELECT * FROM movies WHERE title LIKE "%'.$string.'%" ORDER BY title ASC;';
-	$result = $mysqli->query($query);
-	while ($r = $result->fetch_object()) {
-		printMovie(getMovie($r->id));
+	if ($type != "movie") {
+		$query = 'SELECT * FROM '.$type.'s WHERE '.$type.' LIKE "%'.$string.'%" ORDER BY '.$type.' ASC;';
 	}
+	return $mysqli->query($query);
 	
 }
 
