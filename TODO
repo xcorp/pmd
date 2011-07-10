@@ -1,0 +1,2 @@
+*Escape all PATHS using escapeSpecialChars()
+*Check if uploaded nfo contains link to IMDB, if not, abort

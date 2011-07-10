@@ -43,7 +43,8 @@ function getMovie($id) {
 	return $movie;
 }
 
-function replaceSpaces($string) {
+function escapeSpecialChars($string) {
+	$string = str_replace("'", "\'", $string);
 	return str_replace(' ', '\ ', $string);
 }
 
@@ -94,7 +95,7 @@ function insertMovie($movie) {
 
 function parseUploadedFile() {
 	move_uploaded_file($_FILES["file"]["tmp_name"], "tmp/" . $_FILES["file"]["name"]);
-	$imdbLink = exec('grep imdb /var/www/pmd/tmp/'.replaceSpaces($_FILES["file"]["name"]));
+	$imdbLink = exec('grep imdb /var/www/pmd/tmp/'.escapeSpecialChars($_FILES["file"]["name"]));
 	$imdbId = 'tt'.preg_replace('/[^0-9]*/','', $imdbLink);
 	insertMovie((getMovieInfo('i', $imdbId)));
 	exec('rm /var/www/pmd/tmp/'.$_FILES["file"]["name"]);	
