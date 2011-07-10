@@ -8,6 +8,41 @@ function checkIfMovieExists($id) {
 	return $result->num_rows;
 }
 
+
+function getMovie($id) {
+	global $mysqli;
+	$query = 'SELECT * FROM movies WHERE id="'.$id.'";';
+	$result = $mysqli->query($query);
+	while ($res = $result->fetch_object()) {
+		$movie = $res;
+	}
+	$query = 'SELECT actors.actor FROM actors LEFT JOIN `actor-movie` ON actors.id=`actor-movie`.actor WHERE movie='.$id.';';
+	$result = $mysqli->query($query);
+	while ($actor = $result->fetch_object()) {
+		$movie->actors[] = $actor->actor;
+	}
+	
+	$query = 'SELECT genres.genre FROM genres LEFT JOIN `genre-movie` ON genres.id=`genre-movie`.genre WHERE movie='.$id.';';
+	$result = $mysqli->query($query);
+	while ($genre = $result->fetch_object()) {
+		$movie->genres[] = $genre->genre;
+	}
+	
+	$query = 'SELECT writers.writer FROM writers LEFT JOIN `writer-movie` ON writers.id=`writer-movie`.writer WHERE movie='.$id.';';
+	$result = $mysqli->query($query);
+	while ($writer = $result->fetch_object()) {
+		$movie->writers[] = $writer->writer;
+	}
+	
+	$query = 'SELECT directors.director FROM directors LEFT JOIN `director-movie` ON directors.id=`director-movie`.director WHERE movie='.$id.';';
+	$result = $mysqli->query($query);
+	while ($director = $result->fetch_object()) {
+		$movie->directors[] = $director->director;
+	}
+	
+	return $movie;
+}
+
 function replaceSpaces($string) {
 	return str_replace(' ', '\ ', $string);
 }
@@ -48,10 +83,8 @@ function insertMovie($movie) {
  						on duplicate key update id=id;
  						INSERT INTO `actor-movie` SELECT id, "'.$movie->ID.'" FROM actors  WHERE actor="'.$actor.'";';
 		}
-		
 		if($mysqli->multi_query($query)) {
 			echo $movie->Title.' added to database';
-			printMovie($movie->ID);
 		}
 		else {
 			echo "Something went wrong, try again";
@@ -73,7 +106,7 @@ function printUploadForm() {
 	<label for="file">Filename:</label>
 	<input type="file" name="file" id="file" />
 	<br />
-	<input type="submit" name="submit" value="Submit" />
+	<input type="submit" value="Upload" />
 	</form>';
 }
 
@@ -90,39 +123,7 @@ function getMovieInfo($type, $value) {
 	return $movie;
 }
 
-function getMovie($id) {
-	global $mysqli;
-	$query = 'SELECT * FROM movies WHERE id="'.$id.'";';
-	$result = $mysqli->query($query);
-	while ($res = $result->fetch_object()) {
-		$movie = $res;
-	}
-	$query = 'SELECT actors.actor FROM actors LEFT JOIN `actor-movie` ON actors.id=`actor-movie`.actor WHERE movie='.$id.';';
-	$result = $mysqli->query($query);
-	while ($actor = $result->fetch_object()) {
-		$movie->actors[] = $actor->actor;
-	}
-	
-	$query = 'SELECT genres.genre FROM genres LEFT JOIN `genre-movie` ON genres.id=`genre-movie`.genre WHERE movie='.$id.';';
-	$result = $mysqli->query($query);
-	while ($genre = $result->fetch_object()) {
-		$movie->genres[] = $genre->genre;
-	}
-	
-	$query = 'SELECT writers.writer FROM writers LEFT JOIN `writer-movie` ON writers.id=`writer-movie`.writer WHERE movie='.$id.';';
-	$result = $mysqli->query($query);
-	while ($writer = $result->fetch_object()) {
-		$movie->writers[] = $writer->writer;
-	}
-	
-	$query = 'SELECT directors.director FROM directors LEFT JOIN `director-movie` ON directors.id=`director-movie`.director WHERE movie='.$id.';';
-	$result = $mysqli->query($query);
-	while ($director = $result->fetch_object()) {
-		$movie->directors[] = $director->director;
-	}
-	
-	return $movie;
-}
+
 
 function printMovie($movie) {
 	echo '<H1>'.$movie->title.' ('.$movie->year.')</H1>
@@ -136,6 +137,23 @@ function printMovie($movie) {
 		echo $actor.'<br />';
 		;
 	}
+}
+
+function printSearchField() {
+	echo '<form action="?" method="GET">
+		<input name="search_string">
+		<input type="submit" value="Search">
+		</form>';
+}
+
+function searchMovie($string) {
+	global $mysqli;
+	$query = 'SELECT * FROM movies WHERE title LIKE "%'.$string.'%" ORDER BY title ASC;';
+	$result = $mysqli->query($query);
+	while ($r = $result->fetch_object()) {
+		printMovie(getMovie($r->id));
+	}
+	
 }
 
 
